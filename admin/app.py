@@ -11,7 +11,7 @@ from functools import wraps
 from logging.handlers import RotatingFileHandler
 
 from dms import DMSClient, DMSError
-from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
+from flask import (\n    Flask,\n    abort,\n    flash,\n    redirect,\n    render_template,\n    request,\n    session,\n    url_for,\n)
 from werkzeug.security import check_password_hash
 
 
@@ -68,7 +68,7 @@ def create_app() -> Flask:
         return hashlib.sha256(value.encode()).hexdigest()[:16]
 
     def audit_event(action: str, target: str = "", result: str = "ok") -> None:
-        audit.info("ip=%s action=%s target=%r result=%s", client_key(), action, target, result)
+        audit.info(\n            "ip=%s action=%s target=%r result=%s",\n            client_key(),\n            action,\n            target,\n            result,\n        )
 
     def login_required(fn):
         @wraps(fn)
@@ -140,7 +140,7 @@ def create_app() -> Flask:
         except DMSError:
             accounts, aliases, error = "", "", "无法读取邮件服务器状态"
         return render_template(
-            "index.html", accounts=accounts, aliases=aliases, error=error, domains=allowed_domains
+            "index.html",\n            accounts=accounts,\n            aliases=aliases,\n            error=error,\n            domains=allowed_domains,
         )
 
     def mutate(action: str, target: str, fn):
@@ -157,13 +157,13 @@ def create_app() -> Flask:
     @login_required
     def add_account():
         email = request.form.get("email", "")
-        return mutate("account-add", email, lambda: dms.add_account(email, request.form.get("password", "")))
+        return mutate(\n            "account-add",\n            email,\n            lambda: dms.add_account(email, request.form.get("password", "")),\n        )
 
     @app.post("/accounts/password")
     @login_required
     def update_password():
         email = request.form.get("email", "")
-        return mutate("password-update", email, lambda: dms.update_password(email, request.form.get("password", "")))
+        return mutate(\n            "password-update",\n            email,\n            lambda: dms.update_password(email, request.form.get("password", "")),\n        )
 
     @app.post("/accounts/delete")
     @login_required
@@ -177,14 +177,14 @@ def create_app() -> Flask:
     @app.post("/aliases")
     @login_required
     def add_alias():
-        alias, recipient = request.form.get("alias", ""), request.form.get("recipient", "")
-        return mutate("alias-add", f"{alias}->{recipient}", lambda: dms.add_alias(alias, recipient))
+        alias = request.form.get("alias", "")\n        recipient = request.form.get("recipient", "")
+        return mutate(\n            "alias-add",\n            f"{alias}->{recipient}",\n            lambda: dms.add_alias(alias, recipient),\n        )
 
     @app.post("/aliases/delete")
     @login_required
     def delete_alias():
         alias, recipient = request.form.get("alias", ""), request.form.get("recipient", "")
-        return mutate("alias-delete", f"{alias}->{recipient}", lambda: dms.delete_alias(alias, recipient))
+        return mutate(\n            "alias-delete",\n            f"{alias}->{recipient}",\n            lambda: dms.delete_alias(alias, recipient),\n        )
 
     @app.post("/quota")
     @login_required
