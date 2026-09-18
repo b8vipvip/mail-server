@@ -155,7 +155,7 @@ def main() -> None:
     try:
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as server:
             server.bind(str(SOCKET_PATH))
-            os.chown(SOCKET_PATH, 0, int(os.environ.get("MAILADMIN_GID", "987")))
+            group = os.environ.get("MAILADMIN_GROUP", "mailadmin")\n            import grp\n\n            os.chown(SOCKET_PATH, 0, grp.getgrnam(group).gr_gid)
             os.chmod(SOCKET_PATH, 0o660)
             server.listen(16)
             while True:
