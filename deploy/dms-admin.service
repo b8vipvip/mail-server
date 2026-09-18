@@ -1,19 +1,23 @@
 [Unit]
 Description=DMS Mail Admin
-After=docker.service network-online.target
-Requires=docker.service
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
-User=root
+User=mailadmin
+Group=mailadmin
 WorkingDirectory=/opt/mail-server/admin
 EnvironmentFile=/etc/mail-server/admin.env
-ExecStart=/opt/mail-server/.venv/bin/gunicorn --workers 1 --threads 2 --bind 127.0.0.1:8090 --access-logfile - --error-logfile - app:app
+ExecStart=/opt/mail-server/.venv/bin/gunicorn --workers 1 --threads 2 --bind 127.0.0.1:8089 --access-logfile - --error-logfile - app:app
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=true
 PrivateTmp=true
+ProtectSystem=strict
 ProtectHome=true
+ReadWritePaths=/var/log/mail-server
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 
 [Install]
 WantedBy=multi-user.target
