@@ -1,0 +1,27 @@
+# Secrets / production state
+.env
+.env.*
+!.env.example
+mailserver.env
+*.pem
+*.key
+*.private
+postfix-accounts.cf
+postfix-virtual.cf
+docker-data/
+.secrets/
+certbot/
+letsencrypt/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Runtime
+*.log
+*.sqlite3
+instance/
