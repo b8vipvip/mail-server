@@ -112,7 +112,7 @@ def dispatch(request: object) -> str:
         )
         listening = listeners.stdout if listeners.returncode == 0 else ""
         def port_open(port: int) -> bool:
-            return bool(re.search(rf":{port}\\s", listening))
+            return bool(re.search(rf":{port}\s", listening))
         status = {
             "mailserver": running.returncode == 0 and running.stdout.strip() == "true",
             "smtp25": port_open(25),
