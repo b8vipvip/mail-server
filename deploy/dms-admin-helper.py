@@ -8,6 +8,7 @@ import json
 import os
 import re
 import shutil
+import traceback
 import socket
 import subprocess
 from datetime import datetime, timezone
@@ -17,6 +18,7 @@ CONTAINER = "mailserver"
 SOCKET_PATH = Path("/run/dms-admin/helper.sock")
 CONFIG_DIR = Path("/opt/mail-cn2/docker-data/dms/config")
 BACKUP_DIR = Path("/var/backups/dms-admin")
+HELPER_LOG = Path("/var/log/mail-server/helper.log")
 ALLOWED_DOMAINS = {"cn2.io", "mv3.cn"}
 ALLOWED_ACTIONS = {
     "list-accounts",
@@ -101,14 +103,23 @@ def dispatch(request: object) -> str:
         receive = run_dms("email", "restrict", "list", "receive")
         return json.dumps({"send": send, "receive": receive})
     if action == "service-status" and not args and secret is None:
-        def cmd(*argv: str) -> bool:
-            return subprocess.run(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, check=False).returncode == 0
+        running = subprocess.run(
+            ["/usr/bin/docker", "inspect", "-f", "{{.State.Running}}", CONTAINER],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=5, check=False,
+        )
+        listeners = subprocess.run(
+            ["/usr/bin/docker", "exec", CONTAINER, "ss", "-lntH"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=5, check=False,
+        )
+        listening = listeners.stdout if listeners.returncode == 0 else ""
+        def port_open(port: int) -> bool:
+            return bool(re.search(rf":{port}\\s", listening))
         status = {
-            "mailserver": cmd("/usr/bin/docker", "inspect", "-f", "{{.State.Running}}", CONTAINER),
-            "smtp25": cmd("/usr/bin/timeout", "2", "/bin/bash", "-c", "</dev/tcp/127.0.0.1/25"),
-            "submission587": cmd("/usr/bin/timeout", "2", "/bin/bash", "-c", "</dev/tcp/127.0.0.1/587"),
-            "smtps465": cmd("/usr/bin/timeout", "2", "/bin/bash", "-c", "</dev/tcp/127.0.0.1/465"),
-            "imap993": cmd("/usr/bin/timeout", "2", "/bin/bash", "-c", "</dev/tcp/127.0.0.1/993"),
+            "mailserver": running.returncode == 0 and running.stdout.strip() == "true",
+            "smtp25": port_open(25),
+            "submission587": port_open(587),
+            "smtps465": port_open(465),
+            "imap993": port_open(993),
         }
         return json.dumps(status)
     if action in {"add-account", "update-password"} and len(args) == 1:
@@ -149,6 +160,13 @@ def dispatch(request: object) -> str:
     raise RequestError("unsupported action or arguments")
 
 
+def helper_log(message: str) -> None:
+    HELPER_LOG.parent.mkdir(mode=0o750, parents=True, exist_ok=True)
+    safe = message.replace("\\n", " ")[:1000]
+    with HELPER_LOG.open("a", encoding="utf-8") as handle:
+        handle.write(f"{datetime.now(timezone.utc).isoformat()} level=ERROR component=helper {safe}\\n")
+
+
 def handle(conn: socket.socket) -> None:
     data = bytearray()
     while True:
@@ -182,7 +200,14 @@ def main() -> None:
                 with conn:
                     try:
                         handle(conn)
-                    except (RequestError, json.JSONDecodeError, OSError, subprocess.TimeoutExpired):
+                    except (RequestError, json.JSONDecodeError, OSError, subprocess.TimeoutExpired) as exc:
+                        action = "unknown"
+                        try:
+                            if isinstance(locals().get("request"), dict):
+                                action = str(locals()["request"].get("action", "unknown"))
+                        except Exception:
+                            pass
+                        helper_log(f"action={action} error={type(exc).__name__}: {exc}")
                         try:
                             conn.sendall(json.dumps({"ok": False}).encode())
                         except OSError:
