@@ -2,16 +2,16 @@
 {% block title %}仪表盘 · Mail Server Admin{% endblock %}
 {% block body %}
 <div class="admin-sidebar">
-  <div class="side-brand"><span class="side-logo">M</span><div><strong>Mail Server Admin</strong><small>邮件服务器管理控制台</small><em>v0.1.7</em></div></div>
+  <div class="side-brand"><span class="side-logo">M</span><div><strong>Mail Server Admin</strong><small>邮件服务器管理控制台</small><em>v0.1.8</em></div></div>
   <nav>
     <a class="active" href="#dashboard"><span>⌂</span>仪表盘</a>
     <a href="#accounts"><span>✉</span>邮箱账户</a>
     <a href="#aliases"><span>↗</span>邮箱别名</a>
     <a href="#settings"><span>⚙</span>系统设置</a>
     <a href="#restrict"><span>♢</span>发送/接收限制</a>
-    <a href="#audit"><span>▤</span>操作日志</a>
+    <a href="{{url_for('audit_log')}}" target="_blank"><span>▤</span>操作日志</a>
   </nav>
-  <div class="service-card"><b><i></i>服务运行中</b><p>Web 服务 <span>正常</span></p><p>Helper 服务 <span>正常</span></p><p>Docker Mailserver <span>正常</span></p></div>
+  <div class="service-card"><b><i></i>实时服务状态</b><p>管理 Web <span>正常</span></p><p>Helper <span>正常</span></p><p>Docker Mailserver <span>{{'正常' if service_status.mailserver else '异常'}}</span></p><p>SMTP 25 <span>{{'正常' if service_status.smtp25 else '异常'}}</span></p><p>SMTP 465/587 <span>{{'正常' if service_status.smtps465 and service_status.submission587 else '异常'}}</span></p><p>IMAP 993 <span>{{'正常' if service_status.imap993 else '异常'}}</span></p></div>
 </div>
 
 <div class="admin-top"><div></div><div class="admin-user"><span class="avatar">A</span><b>admin</b><span>⌄</span>
@@ -24,19 +24,20 @@
   <div class="stats-grid">
     <div class="stat-card"><i class="stat-icon blue">✉</i><div><span>邮箱账户</span><strong>{{account_rows|length}}</strong><small>个账户</small></div><em>›</em></div>
     <div class="stat-card"><i class="stat-icon purple">↗</i><div><span>邮箱别名</span><strong>{{alias_rows|length}}</strong><small>个别名</small></div><em>›</em></div>
-    <div class="stat-card"><i class="stat-icon green">▤</i><div><span>存储使用</span><strong>{% set ns=namespace(bytes=0) %}{% for r in account_rows %}{% if r.used.endswith('K') %}{% set ns.bytes=ns.bytes+(r.used[:-1]|float)*1024 %}{% endif %}{% endfor %}{{ '%.1f'|format(ns.bytes/1024) }} KB</strong><small>总已用（估算）</small></div><em>›</em></div>
-    <div class="stat-card"><i class="stat-icon green">♢</i><div><span>服务状态</span><strong class="healthy">正常</strong><small>所有服务运行中</small></div><em>›</em></div>
+    <div class="stat-card"><i class="stat-icon green">▤</i><div><span>系统磁盘</span><strong>{{disk_status.percent|default('-')}}%</strong><small>根分区实际使用率</small></div><em>›</em></div>
+    {% set all_ok=service_status.mailserver and service_status.smtp25 and service_status.smtps465 and service_status.submission587 and service_status.imap993 %}
+    <div class="stat-card"><i class="stat-icon green">♢</i><div><span>邮件服务</span><strong class="{{'healthy' if all_ok else ''}}">{{'正常' if all_ok else '异常'}}</strong><small>25 / 465 / 587 / 993 实时检查</small></div><em>›</em></div>
   </div>
 
   <div class="lists-grid">
     <section class="dash-card" id="accounts">
       <div class="dash-title"><div><i class="mini-icon">✉</i><span><b>邮箱账户列表</b><small>当前服务器上的所有邮箱账户及其使用情况。</small></span></div><label class="search-box">⌕<input id="accountSearch" placeholder="搜索邮箱地址..."></label></div>
       <div class="table-scroll"><table class="dash-table"><thead><tr><th>#</th><th>邮箱地址</th><th>别名 (Aliases)</th><th>已用空间</th><th>配额</th><th>使用率</th><th>状态</th><th>操作</th></tr></thead><tbody id="accountBody">
-      {% for r in account_rows %}<tr><td>{{loop.index}}</td><td><b>{{r.email}}</b></td><td>{% if r.aliases %}<span class="alias-chip">{{r.aliases}}</span>{% else %}-{% endif %}</td><td>{{r.used}}</td><td>{{r.quota}}</td><td><span class="bar"><i style="width:{{r.usage|replace('%','')}}%"></i></span>{{r.usage}}</td><td><span class="ok-dot"></span>正常</td><td><button class="more-btn" type="button">•••</button></td></tr>{% else %}<tr><td colspan="8" class="empty-cell">暂无邮箱账户</td></tr>{% endfor %}
+      {% for r in account_rows %}<tr><td>{{loop.index}}</td><td><b>{{r.email}}</b></td><td>{% if r.aliases %}<span class="alias-chip">{{r.aliases}}</span>{% else %}-{% endif %}</td><td>{{r.used}}</td><td>{{r.quota}}</td><td><span class="bar"><i style="width:{{r.usage|replace('%','')}}%"></i></span>{{r.usage}}</td><td><span class="ok-dot"></span>正常</td><td><button class="more-btn account-pick" type="button" data-email="{{r.email}}" title="填入下方操作表单">选择</button></td></tr>{% else %}<tr><td colspan="8" class="empty-cell">暂无邮箱账户</td></tr>{% endfor %}
       </tbody></table></div><div class="card-foot">共 {{account_rows|length}} 个邮箱账户</div>
     </section>
     <section class="dash-card" id="aliases"><div class="dash-title"><div><i class="mini-icon purple">↗</i><span><b>邮箱别名列表</b><small>当前配置的邮箱别名关系。</small></span></div></div>
-      <div class="table-scroll"><table class="dash-table"><thead><tr><th>#</th><th>别名地址</th><th>目标邮箱</th><th>操作</th></tr></thead><tbody>{% for r in alias_rows %}<tr><td>{{loop.index}}</td><td><b class="linkish">{{r.alias}}</b></td><td>{{r.recipient}}</td><td><button class="more-btn" type="button">•••</button></td></tr>{% else %}<tr><td colspan="4" class="empty-cell">暂无邮箱别名</td></tr>{% endfor %}</tbody></table></div><div class="card-foot">共 {{alias_rows|length}} 个别名</div>
+      <div class="table-scroll"><table class="dash-table"><thead><tr><th>#</th><th>别名地址</th><th>目标邮箱</th><th>操作</th></tr></thead><tbody>{% for r in alias_rows %}<tr><td>{{loop.index}}</td><td><b class="linkish">{{r.alias}}</b></td><td>{{r.recipient}}</td><td><button class="more-btn alias-pick" type="button" data-alias="{{r.alias}}" data-recipient="{{r.recipient}}" title="用于删除该别名">选择</button></td></tr>{% else %}<tr><td colspan="4" class="empty-cell">暂无邮箱别名</td></tr>{% endfor %}</tbody></table></div><div class="card-foot">共 {{alias_rows|length}} 个别名</div>
     </section>
   </div>
 
@@ -46,9 +47,14 @@
     <section class="form-card"><h3><i>▤</i>设置邮箱容量</h3><p>调整邮箱账户的存储配额。</p><form method="post" action="{{url_for('set_quota')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><label>邮箱地址<input name="email" type="email" placeholder="user@mv3.cn" required></label><label>容量<select name="quota"><option value="1G">1 GB</option><option value="500M">500 MB</option><option value="2G">2 GB</option><option value="5G">5 GB</option></select></label><button class="btn btn-secondary">▣　保存容量</button></form></section>
     <section class="form-card" id="restrict"><h3><i>♢</i>发送/接收限制</h3><p>限制或放宽邮箱的发送/接收能力。</p><form method="post" action="{{url_for('restrict')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><label>邮箱地址<input name="email" type="email" placeholder="user@mv3.cn" required></label><div class="form-row"><label>方向<select name="direction"><option value="send">发送邮件</option><option value="receive">接收邮件</option></select></label><label>操作<select name="mode"><option value="add">限制</option><option value="del">恢复</option></select></label></div><button class="btn btn-secondary">⚙　应用设置</button></form></section>
   </div>
+  <section class="restriction-summary"><b>当前限制状态</b><span>发送限制：{{ restrictions.send if restrictions.send else '无' }}</span><span>接收限制：{{ restrictions.receive if restrictions.receive else '无' }}</span></section>
 
   <section class="danger-strip"><div><i>▰</i><span><b>危险操作</b><small>删除邮箱和别名不可恢复，请谨慎操作。</small></span></div><div><details><summary class="danger-btn">▰　删除邮箱　›</summary><form method="post" action="{{url_for('delete_account')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="email" type="email" placeholder="邮箱地址" required><input name="confirm" placeholder="再次输入邮箱地址" required><button class="btn btn-danger">确认永久删除</button></form></details><details><summary class="danger-btn">▰　删除别名　›</summary><form method="post" action="{{url_for('delete_alias')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="alias" type="email" placeholder="别名地址" required><input name="recipient" type="email" placeholder="目标邮箱" required><button class="btn btn-danger">确认删除别名</button></form></details></div></section>
-  <footer class="dash-footer">Mail Server Admin v0.1.7　|　安全 · 简洁 · 高效 <span>© 2026 Mail Server. All rights reserved.</span></footer>
+  <footer class="dash-footer">Mail Server Admin v0.1.8　|　安全 · 简洁 · 高效 <span>© 2026 Mail Server. All rights reserved.</span></footer>
 </div>
-<script>document.getElementById('accountSearch')?.addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('#accountBody tr').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')})</script>
+<script>
+document.getElementById('accountSearch')?.addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('#accountBody tr').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')});
+document.querySelectorAll('.account-pick').forEach(b=>b.addEventListener('click',()=>{const email=b.dataset.email;document.querySelectorAll('input[name="email"]').forEach(i=>i.value=email);document.querySelector('#settings')?.scrollIntoView({behavior:'smooth'});}));
+document.querySelectorAll('.alias-pick').forEach(b=>b.addEventListener('click',()=>{const d=document.querySelector('.danger-strip details:last-child');if(d){d.open=true;d.querySelector('input[name="alias"]').value=b.dataset.alias;d.querySelector('input[name="recipient"]').value=b.dataset.recipient;d.scrollIntoView({behavior:'smooth'});}}));
+</script>
 {% endblock %}
