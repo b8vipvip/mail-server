@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import grp
 import json
 import os
 import re
