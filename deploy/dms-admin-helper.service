@@ -7,7 +7,7 @@ Requires=docker.service
 Type=simple
 User=root
 Group=root
-Environment=MAILADMIN_GID=987
+Environment=MAILADMIN_GROUP=mailadmin
 ExecStart=/usr/local/sbin/dms-admin-helper-server
 Restart=on-failure
 RestartSec=3
