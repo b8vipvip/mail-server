@@ -75,7 +75,9 @@ class DMSClient:
         return self._run("list-accounts")
 
     def account_rows(self) -> list[dict[str, str]]:
-        output = self.list_accounts()
+        return self.account_rows_from_output(self.list_accounts())
+
+    def account_rows_from_output(self, output: str) -> list[dict[str, str]]:
         rows: list[dict[str, str]] = []
         current: dict[str, str] | None = None
         account_re = re.compile(
@@ -121,7 +123,9 @@ class DMSClient:
         return self._run("list-aliases")
 
     def alias_rows(self) -> list[dict[str, str]]:
-        output = self.list_aliases()
+        return self.alias_rows_from_output(self.list_aliases())
+
+    def alias_rows_from_output(self, output: str) -> list[dict[str, str]]:
         rows: list[dict[str, str]] = []
         for raw_line in output.splitlines():
             line = raw_line.strip()
