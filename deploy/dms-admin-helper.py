@@ -28,6 +28,8 @@ ALLOWED_ACTIONS = {
     "delete-alias",
     "set-quota",
     "restrict",
+    "service-status",
+    "list-restrictions",
 }
 EMAIL_RE = re.compile(r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 QUOTA_RE = re.compile(r"\d+[KMGTP]?")
@@ -94,6 +96,21 @@ def dispatch(request: object) -> str:
         return run_dms("email", "list")
     if action == "list-aliases" and not args and secret is None:
         return run_dms("alias", "list")
+    if action == "list-restrictions" and not args and secret is None:
+        send = run_dms("email", "restrict", "list", "send")
+        receive = run_dms("email", "restrict", "list", "receive")
+        return json.dumps({"send": send, "receive": receive})
+    if action == "service-status" and not args and secret is None:
+        def cmd(*argv: str) -> bool:
+            return subprocess.run(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, check=False).returncode == 0
+        status = {
+            "mailserver": cmd("/usr/bin/docker", "inspect", "-f", "{{.State.Running}}", CONTAINER),
+            "smtp25": cmd("/usr/bin/timeout", "2", "/bin/bash", "-c", "</dev/tcp/127.0.0.1/25"),
+            "submission587": cmd("/usr/bin/timeout", "2", "/bin/bash", "-c", "</dev/tcp/127.0.0.1/587"),
+            "smtps465": cmd("/usr/bin/timeout", "2", "/bin/bash", "-c", "</dev/tcp/127.0.0.1/465"),
+            "imap993": cmd("/usr/bin/timeout", "2", "/bin/bash", "-c", "</dev/tcp/127.0.0.1/993"),
+        }
+        return json.dumps(status)
     if action in {"add-account", "update-password"} and len(args) == 1:
         address = validate_email(args[0])
         if not isinstance(secret, str) or len(secret) < 12 or len(secret) > 1024:
