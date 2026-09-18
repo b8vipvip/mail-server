@@ -8,7 +8,6 @@ import json
 import os
 import re
 import shutil
-import traceback
 import socket
 import subprocess
 from datetime import datetime, timezone
