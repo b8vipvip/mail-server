@@ -10,3 +10,16 @@
 @media(max-width:1250px){.stats-grid{grid-template-columns:1fr 1fr}.forms-grid{grid-template-columns:1fr 1fr}.lists-grid{grid-template-columns:1fr}}
 @media(max-width:900px){.admin-sidebar{width:72px;padding:12px 8px}.side-brand div,.admin-sidebar nav a:not(.active){font-size:0}.side-logo{width:42px}.admin-sidebar nav a{justify-content:center;padding:0}.admin-sidebar nav a span{font-size:20px}.service-card{display:none}.admin-top{left:72px}.dashboard-page{margin-left:72px}.welcome-row{align-items:flex-start}.managed-domains span{display:none}}
 @media(max-width:650px){.admin-sidebar{display:none}.admin-top{left:0}.dashboard-page{margin-left:0;padding:65px 10px 0}.stats-grid,.forms-grid{grid-template-columns:1fr}.welcome-row{display:block}.managed-domains{margin-top:12px}.search-box{display:none}.danger-strip{align-items:flex-start;gap:10px;flex-direction:column}.dash-footer span{float:none;display:block;margin-top:5px}}
+
+
+/* v0.1.8 readability pass: target normal desktop browser zoom at 100% */
+@media(min-width:1260px){
+html,body{font-size:16px}
+.admin-sidebar{width:260px;padding:18px 14px}.admin-top{left:260px;height:60px}.dashboard-page{margin-left:260px;padding:82px 24px 0}
+.side-brand strong{font-size:18px}.side-brand small,.side-brand em{font-size:12px}.admin-sidebar nav a{height:48px;font-size:15px}
+.service-card{font-size:13px}.welcome-row h1{font-size:24px}.welcome-row p{font-size:14px}.managed-domains{font-size:13px}
+.stat-card{min-height:126px;padding:20px}.stat-card span{font-size:15px}.stat-card strong{font-size:28px}.stat-card small{font-size:13px}
+.dash-title{min-height:80px}.dash-title b{font-size:17px}.dash-title small{font-size:13px}.dash-table{font-size:14px}.dash-table th,.dash-table td{padding:12px 10px}.card-foot{font-size:13px}
+.form-card h3{font-size:17px}.form-card>p{font-size:13px}label{font-size:13px}input,select{min-height:42px;font-size:14px}.btn{min-height:42px;font-size:14px}
+.danger-strip b{font-size:17px}.danger-strip small{font-size:13px}.dash-footer{font-size:12px}
+}
