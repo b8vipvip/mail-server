@@ -76,3 +76,20 @@ def test_parses_alias_rows(list_aliases):
         {"alias": "postmaster@cn2.io", "recipient": "noreply@cn2.io"},
         {"alias": "postmaster@mv3.cn", "recipient": "gptwork@mv3.cn"},
     ]
+
+
+@patch("dms.DMSClient._run")
+def test_service_status_parses_real_flags(run):
+    run.return_value = json.dumps({"mailserver": True, "smtp25": True, "smtps465": False, "submission587": True, "imap993": True})
+    status = DMSClient().service_status()
+    assert status["mailserver"] is True
+    assert status["smtps465"] is False
+
+
+@patch("dms.DMSClient._run")
+def test_restrictions_strip_ansi_and_allowed_message(run):
+    run.return_value = json.dumps({
+        "send": "\u001b[34mINFO\u001b[0m restrict-access: Everyone is allowed to send mails",
+        "receive": "\u001b[34mINFO\u001b[0m restrict-access: Everyone is allowed to receive mails",
+    })
+    assert DMSClient().restrictions() == {"send": "无", "receive": "无"}

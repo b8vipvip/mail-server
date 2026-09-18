@@ -174,4 +174,11 @@ class DMSClient:
             data = json.loads(self._run("list-restrictions"))
         except json.JSONDecodeError as exc:
             raise DMSError("Invalid restriction status") from exc
-        return {"send": str(data.get("send", "")), "receive": str(data.get("receive", ""))}
+        ansi = re.compile(r"\\x1b\\[[0-9;]*m")
+        def clean(value: object) -> str:
+            text = ansi.sub("", str(value)).strip()
+            lines = [line.strip() for line in text.splitlines() if line.strip()]
+            if any("Everyone is allowed" in line for line in lines):
+                return "无"
+            return "；".join(lines) if lines else "无"
+        return {"send": clean(data.get("send", "")), "receive": clean(data.get("receive", ""))}

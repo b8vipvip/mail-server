@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}运行日志 · Mail Server Admin{% endblock %}
+{% block body %}
+<div class="log-page">
+  <div class="log-head">
+    <div><a class="back-link" href="{{url_for('index')}}">← 返回仪表盘</a><h1>运行日志</h1><p>记录管理操作、状态异常、Helper 错误与 Web 未处理异常。日志不会记录邮箱密码。</p></div>
+    <a class="btn btn-primary log-export" href="{{url_for('export_runtime_log')}}">导出日志</a>
+  </div>
+  <div class="log-card">
+    <div class="log-toolbar"><b>最近 {{lines|length}} 条</b><input id="logSearch" placeholder="筛选 action / error / target..."></div>
+    <div class="log-list" id="logList">
+      {% for line in lines %}
+      <div class="log-line {{'log-error' if 'failed' in line or 'ERROR' in line or 'abnormal' in line else ''}}">{{line}}</div>
+      {% else %}
+      <div class="log-empty">暂无运行日志</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+<script>
+document.getElementById('logSearch')?.addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.log-line').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')});
+</script>
+{% endblock %}
