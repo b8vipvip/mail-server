@@ -21,7 +21,26 @@
       <div><span class="section-icon">＠</span><div><h2>邮箱账户</h2><p>当前服务器上的邮箱与容量状态</p></div></div>
       <span class="status-pill">实时</span>
     </div>
-    <pre class="server-list">{{ accounts }}</pre>
+    <div class="table-scroll">
+      <table class="data-table account-table">
+        <thead><tr><th>#</th><th>邮箱地址</th><th>别名</th><th>已用空间</th><th>配额</th><th>使用率</th><th>状态</th></tr></thead>
+        <tbody>
+        {% for row in account_rows %}
+          <tr>
+            <td class="row-no">{{ loop.index }}</td>
+            <td><strong class="email-cell">{{ row.email }}</strong></td>
+            <td>{% if row.aliases %}<span class="alias-tag">{{ row.aliases }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td>{{ row.used }}</td><td>{{ row.quota }}</td>
+            <td><span class="usage-track"><i style="width:{{ row.usage|replace('%','') }}%"></i></span><span class="usage-text">{{ row.usage }}</span></td>
+            <td><span class="online-dot"></span>正常</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="empty-cell">暂无邮箱账户</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="table-foot">共 {{ account_rows|length }} 个邮箱账户</div>
 
     <div class="action-grid">
       <div class="action-card">
@@ -74,7 +93,19 @@
       <div class="panel-head">
         <div><span class="section-icon">↗</span><div><h2>邮箱别名</h2><p>转发与映射关系</p></div></div>
       </div>
-      <pre class="server-list compact">{{ aliases }}</pre>
+      <div class="table-scroll">
+        <table class="data-table alias-table">
+          <thead><tr><th>#</th><th>别名地址</th><th>目标邮箱</th></tr></thead>
+          <tbody>
+          {% for row in alias_rows %}
+            <tr><td class="row-no">{{ loop.index }}</td><td><strong>{{ row.alias }}</strong></td><td>{{ row.recipient }}</td></tr>
+          {% else %}
+            <tr><td colspan="3" class="empty-cell">暂无邮箱别名</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="table-foot">共 {{ alias_rows|length }} 个邮箱别名</div>
 
       <div class="side-action">
         <h3>新增别名</h3>

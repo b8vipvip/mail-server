@@ -48,3 +48,31 @@ def test_helper_failure_is_generic(socket_factory):
     sock.recv.side_effect = [json.dumps({"ok": False}).encode(), b""]
     with pytest.raises(DMSError, match="Mail operation failed"):
         DMSClient().list_accounts()
+
+
+@patch("dms.DMSClient.list_accounts")
+def test_parses_account_rows(list_accounts):
+    list_accounts.return_value = """* noreply@cn2.io ( 5.0K / ~ ) [0%]
+    [ aliases -> postmaster@cn2.io ]
+
+* admin@cn2.io ( 0 / ~ ) [0%]
+
+* gptwork@mv3.cn ( 1.0K / ~ ) [0%]
+    [ aliases -> postmaster@mv3.cn ]"""
+    rows = DMSClient().account_rows()
+    assert rows == [
+        {"email": "noreply@cn2.io", "used": "5.0K", "quota": "~", "usage": "0%", "aliases": "postmaster@cn2.io"},
+        {"email": "admin@cn2.io", "used": "0", "quota": "~", "usage": "0%", "aliases": ""},
+        {"email": "gptwork@mv3.cn", "used": "1.0K", "quota": "~", "usage": "0%", "aliases": "postmaster@mv3.cn"},
+    ]
+
+
+@patch("dms.DMSClient.list_aliases")
+def test_parses_alias_rows(list_aliases):
+    list_aliases.return_value = """* postmaster@cn2.io noreply@cn2.io
+
+* postmaster@mv3.cn gptwork@mv3.cn"""
+    assert DMSClient().alias_rows() == [
+        {"alias": "postmaster@cn2.io", "recipient": "noreply@cn2.io"},
+        {"alias": "postmaster@mv3.cn", "recipient": "gptwork@mv3.cn"},
+    ]

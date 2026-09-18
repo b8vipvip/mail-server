@@ -74,6 +74,34 @@ class DMSClient:
     def list_accounts(self) -> str:
         return self._run("list-accounts")
 
+    def account_rows(self) -> list[dict[str, str]]:
+        output = self.list_accounts()
+        rows: list[dict[str, str]] = []
+        current: dict[str, str] | None = None
+        account_re = re.compile(
+            r"^\*\s+(\S+@\S+)\s+\(\s*(.*?)\s*/\s*(.*?)\s*\)\s*\[(.*?)\]\s*$"
+        )
+        alias_re = re.compile(r"^\[\s*aliases\s*->\s*(.*?)\s*\]$")
+
+        for raw_line in output.splitlines():
+            line = raw_line.strip()
+            match = account_re.match(line)
+            if match:
+                current = {
+                    "email": match.group(1),
+                    "used": match.group(2),
+                    "quota": match.group(3),
+                    "usage": match.group(4),
+                    "aliases": "",
+                }
+                rows.append(current)
+                continue
+            alias_match = alias_re.match(line)
+            if alias_match and current is not None:
+                current["aliases"] = alias_match.group(1).strip()
+
+        return rows
+
     def add_account(self, email: str, password: str) -> str:
         email = self._validate_email(email)
         if len(password) < 12:
@@ -91,6 +119,18 @@ class DMSClient:
 
     def list_aliases(self) -> str:
         return self._run("list-aliases")
+
+    def alias_rows(self) -> list[dict[str, str]]:
+        output = self.list_aliases()
+        rows: list[dict[str, str]] = []
+        for raw_line in output.splitlines():
+            line = raw_line.strip()
+            if not line.startswith("* "):
+                continue
+            parts = line[2:].split()
+            if len(parts) >= 2:
+                rows.append({"alias": parts[0], "recipient": parts[1]})
+        return rows
 
     def add_alias(self, alias: str, recipient: str) -> str:
         return self._run(
