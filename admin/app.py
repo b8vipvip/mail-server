@@ -5,6 +5,7 @@ import hmac
 import logging
 import os
 import secrets
+import shutil
 import time
 from collections import defaultdict, deque
 from functools import wraps
@@ -153,9 +154,15 @@ def create_app() -> Flask:
             aliases = dms.list_aliases()
             account_rows = dms.account_rows_from_output(accounts)
             alias_rows = dms.alias_rows_from_output(aliases)
+            service_status = dms.service_status()
+            restrictions = dms.restrictions()
+            disk = shutil.disk_usage("/")
+            disk_status = {"used": disk.used, "total": disk.total, "percent": round(disk.used * 100 / disk.total)}
             error = None
         except DMSError:
-            accounts, aliases, account_rows, alias_rows, error = "", "", [], [], "无法读取邮件服务器状态"
+            accounts, aliases, account_rows, alias_rows = "", "", [], []
+            service_status, restrictions, disk_status = {}, {"send": "", "receive": ""}, {}
+            error = "无法读取邮件服务器状态"
         return render_template(
             "index.html",
             accounts=accounts,
@@ -164,6 +171,9 @@ def create_app() -> Flask:
             alias_rows=alias_rows,
             error=error,
             domains=allowed_domains,
+            service_status=service_status,
+            restrictions=restrictions,
+            disk_status=disk_status,
         )
 
     def mutate(action: str, target: str, fn):
@@ -185,6 +195,17 @@ def create_app() -> Flask:
             email,
             lambda: dms.add_account(email, request.form.get("password", "")),
         )
+
+    @app.get("/audit")
+    @login_required
+    def audit_log():
+        path = os.environ.get("AUDIT_LOG", "/var/log/mail-server/audit.log")
+        try:
+            with open(path, encoding="utf-8", errors="replace") as handle:
+                lines = list(deque(handle, maxlen=200))
+        except OSError:
+            lines = []
+        return {"lines": [line.rstrip() for line in reversed(lines)]}
 
     @app.post("/accounts/password")
     @login_required
