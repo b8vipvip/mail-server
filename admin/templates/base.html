@@ -1,12 +1,31 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{% block title %}Mail Server Admin{% endblock %}</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}邮件服务器管理{% endblock %}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
 </head>
-<body><main class="wrap">
-<header><h1>Mail Server Admin</h1>{% if session.get('admin') %}<form method="post" action="{{ url_for('logout') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button>退出</button></form>{% endif %}</header>
-{% for category,message in get_flashed_messages(with_categories=true) %}<div class="msg {{category}}">{{message}}</div>{% endfor %}
+<body>
+<div class="app-shell">
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">M</span>
+    <div><strong>Mail Admin</strong><small>邮件服务器控制台</small></div>
+  </div>
+  {% if session.get('admin') %}
+  <form class="logout-form" method="post" action="{{ url_for('logout') }}">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <button class="btn btn-ghost" type="submit">退出登录</button>
+  </form>
+  {% endif %}
+</header>
+<main class="wrap">
+{% for category,message in get_flashed_messages(with_categories=true) %}
+<div class="msg {{category}}"><span class="msg-dot"></span>{{message}}</div>
+{% endfor %}
 {% block body %}{% endblock %}
-</main></body></html>
+</main>
+</div>
+</body>
+</html>

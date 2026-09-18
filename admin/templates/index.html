@@ -1,14 +1,114 @@
-{% extends "base.html" %}{% block body %}
-{% if error %}<div class="msg error">{{error}}</div>{% endif %}
-<p>允许管理域名：{{ domains|join(', ') }}</p>
-<div class="grid">
-<section class="card"><h2>邮箱账户</h2><pre>{{ accounts }}</pre>
-<h3>新增邮箱</h3><form method="post" action="{{url_for('add_account')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="email" type="email" placeholder="user@mv3.cn" required><input name="password" type="password" minlength="12" autocomplete="new-password" required><button>创建</button></form>
-<h3>修改密码</h3><form method="post" action="{{url_for('update_password')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="email" type="email" required><input name="password" type="password" minlength="12" autocomplete="new-password" required><button>修改</button></form>
-<h3>设置容量</h3><form method="post" action="{{url_for('set_quota')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="email" type="email" required><input name="quota" placeholder="1G" required><button>设置</button></form>
-<h3>发送/接收限制</h3><form method="post" action="{{url_for('restrict')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="email" type="email" required><select name="direction"><option value="send">发送</option><option value="receive">接收</option></select><select name="mode"><option value="add">限制</option><option value="del">恢复</option></select><button>执行</button></form>
-<h3>删除邮箱</h3><form method="post" action="{{url_for('delete_account')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="email" type="email" placeholder="要删除的邮箱" required><input name="confirm" type="text" placeholder="再次完整输入邮箱确认" required><button class="danger">永久删除</button></form></section>
-<section class="card"><h2>邮箱别名</h2><pre>{{ aliases }}</pre>
-<h3>新增别名</h3><form method="post" action="{{url_for('add_alias')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="alias" type="email" required><input name="recipient" type="email" required><button>添加</button></form>
-<h3>删除别名</h3><form method="post" action="{{url_for('delete_alias')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="alias" type="email" required><input name="recipient" type="email" required><button class="danger">删除</button></form></section>
-</div>{% endblock %}
+{% extends "base.html" %}
+{% block title %}邮件管理 · Mail Admin{% endblock %}
+{% block body %}
+<section class="hero">
+  <div>
+    <span class="eyebrow">MAIL SERVER</span>
+    <h1>邮箱管理</h1>
+    <p>集中管理邮箱账户、容量、收发权限与邮箱别名。</p>
+  </div>
+  <div class="domain-box">
+    <span>可管理域名</span>
+    <div class="domain-tags">{% for domain in domains %}<b>{{ domain }}</b>{% endfor %}</div>
+  </div>
+</section>
+
+{% if error %}<div class="msg error"><span class="msg-dot"></span>{{error}}</div>{% endif %}
+
+<div class="dashboard-grid">
+  <section class="panel panel-wide">
+    <div class="panel-head">
+      <div><span class="section-icon">＠</span><div><h2>邮箱账户</h2><p>当前服务器上的邮箱与容量状态</p></div></div>
+      <span class="status-pill">实时</span>
+    </div>
+    <pre class="server-list">{{ accounts }}</pre>
+
+    <div class="action-grid">
+      <div class="action-card">
+        <div class="action-title"><span class="action-no">01</span><div><h3>新增邮箱</h3><p>创建一个新的邮箱账户</p></div></div>
+        <form method="post" action="{{url_for('add_account')}}">
+          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
+          <label>邮箱地址<input name="email" type="email" placeholder="user@mv3.cn" required></label>
+          <label>初始密码<input name="password" type="password" minlength="12" autocomplete="new-password" placeholder="至少 12 位" required></label>
+          <button class="btn btn-primary">创建邮箱</button>
+        </form>
+      </div>
+
+      <div class="action-card">
+        <div class="action-title"><span class="action-no">02</span><div><h3>修改密码</h3><p>重置指定邮箱的登录密码</p></div></div>
+        <form method="post" action="{{url_for('update_password')}}">
+          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
+          <label>邮箱地址<input name="email" type="email" placeholder="name@mv3.cn" required></label>
+          <label>新密码<input name="password" type="password" minlength="12" autocomplete="new-password" placeholder="至少 12 位" required></label>
+          <button class="btn btn-secondary">更新密码</button>
+        </form>
+      </div>
+
+      <div class="action-card">
+        <div class="action-title"><span class="action-no">03</span><div><h3>邮箱容量</h3><p>调整单个账户的存储配额</p></div></div>
+        <form method="post" action="{{url_for('set_quota')}}">
+          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
+          <label>邮箱地址<input name="email" type="email" placeholder="name@mv3.cn" required></label>
+          <label>容量<input name="quota" placeholder="例如 1G、500M" value="1G" required></label>
+          <button class="btn btn-secondary">保存容量</button>
+        </form>
+      </div>
+
+      <div class="action-card">
+        <div class="action-title"><span class="action-no">04</span><div><h3>收发权限</h3><p>限制或恢复邮箱发送/接收能力</p></div></div>
+        <form method="post" action="{{url_for('restrict')}}">
+          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
+          <label>邮箱地址<input name="email" type="email" placeholder="name@mv3.cn" required></label>
+          <div class="form-row">
+            <label>方向<select name="direction"><option value="send">发送邮件</option><option value="receive">接收邮件</option></select></label>
+            <label>操作<select name="mode"><option value="add">限制</option><option value="del">恢复</option></select></label>
+          </div>
+          <button class="btn btn-secondary">应用设置</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <aside class="side-stack">
+    <section class="panel">
+      <div class="panel-head">
+        <div><span class="section-icon">↗</span><div><h2>邮箱别名</h2><p>转发与映射关系</p></div></div>
+      </div>
+      <pre class="server-list compact">{{ aliases }}</pre>
+
+      <div class="side-action">
+        <h3>新增别名</h3>
+        <form method="post" action="{{url_for('add_alias')}}">
+          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
+          <label>别名地址<input name="alias" type="email" placeholder="postmaster@mv3.cn" required></label>
+          <label>目标邮箱<input name="recipient" type="email" placeholder="gptwork@mv3.cn" required></label>
+          <button class="btn btn-primary">添加别名</button>
+        </form>
+      </div>
+
+      <details class="danger-zone">
+        <summary>删除邮箱别名</summary>
+        <form method="post" action="{{url_for('delete_alias')}}">
+          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
+          <label>别名地址<input name="alias" type="email" required></label>
+          <label>目标邮箱<input name="recipient" type="email" required></label>
+          <button class="btn btn-danger">确认删除别名</button>
+        </form>
+      </details>
+    </section>
+
+    <section class="panel danger-panel">
+      <div class="danger-heading"><span>!</span><div><h2>危险操作</h2><p>删除邮箱后不可恢复，请谨慎操作。</p></div></div>
+      <details class="danger-zone account-delete">
+        <summary>永久删除邮箱</summary>
+        <form method="post" action="{{url_for('delete_account')}}">
+          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
+          <label>邮箱地址<input name="email" type="email" placeholder="要删除的邮箱" required></label>
+          <label>二次确认<input name="confirm" type="text" placeholder="再次完整输入邮箱地址" required></label>
+          <button class="btn btn-danger">永久删除</button>
+        </form>
+      </details>
+    </section>
+  </aside>
+</div>
+{% endblock %}
