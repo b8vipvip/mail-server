@@ -16,6 +16,8 @@ ALLOWED_ACTIONS = {
     "delete-alias",
     "set-quota",
     "restrict",
+    "service-status",
+    "list-restrictions",
 }
 
 
@@ -158,3 +160,18 @@ class DMSClient:
         if direction not in {"send", "receive"}:
             raise ValueError("Invalid restriction direction")
         return self._run("restrict", "add" if enabled else "del", direction, email)
+
+
+    def service_status(self) -> dict[str, bool]:
+        try:
+            data = json.loads(self._run("service-status"))
+        except json.JSONDecodeError as exc:
+            raise DMSError("Invalid service status") from exc
+        return {str(key): bool(value) for key, value in data.items()}
+
+    def restrictions(self) -> dict[str, str]:
+        try:
+            data = json.loads(self._run("list-restrictions"))
+        except json.JSONDecodeError as exc:
+            raise DMSError("Invalid restriction status") from exc
+        return {"send": str(data.get("send", "")), "receive": str(data.get("receive", ""))}
