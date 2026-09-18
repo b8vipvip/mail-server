@@ -151,13 +151,17 @@ def create_app() -> Flask:
         try:
             accounts = dms.list_accounts()
             aliases = dms.list_aliases()
+            account_rows = dms.account_rows_from_output(accounts)
+            alias_rows = dms.alias_rows_from_output(aliases)
             error = None
         except DMSError:
-            accounts, aliases, error = "", "", "无法读取邮件服务器状态"
+            accounts, aliases, account_rows, alias_rows, error = "", "", [], [], "无法读取邮件服务器状态"
         return render_template(
             "index.html",
             accounts=accounts,
             aliases=aliases,
+            account_rows=account_rows,
+            alias_rows=alias_rows,
             error=error,
             domains=allowed_domains,
         )
