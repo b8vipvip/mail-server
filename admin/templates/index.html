@@ -42,6 +42,7 @@
     </div>
     <div class="table-foot">共 {{ account_rows|length }} 个邮箱账户</div>
 
+    <div class="section-divider"><span>账户操作</span></div>
     <div class="action-grid">
       <div class="action-card">
         <div class="action-title"><span class="action-no">01</span><div><h3>新增邮箱</h3><p>创建一个新的邮箱账户</p></div></div>
@@ -108,7 +109,7 @@
       <div class="table-foot">共 {{ alias_rows|length }} 个邮箱别名</div>
 
       <div class="side-action">
-        <h3>新增别名</h3>
+        <div class="side-action-head"><span class="action-no">05</span><div><h3>新增别名</h3><p>创建新的邮件转发映射</p></div></div>
         <form method="post" action="{{url_for('add_alias')}}">
           <input type="hidden" name="_csrf" value="{{csrf_token()}}">
           <label>别名地址<input name="alias" type="email" placeholder="postmaster@mv3.cn" required></label>
