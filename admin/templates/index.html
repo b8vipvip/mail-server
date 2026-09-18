@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block body %}
+{% if error %}<div class="msg error">{{error}}</div>{% endif %}
+<div class="grid">
+<section class="card"><h2>邮箱账户</h2><pre>{{ accounts }}</pre><h3>新增邮箱</h3><form method="post" action="{{url_for('add_account')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="email" type="email" placeholder="user@mv3.cn" required><input name="password" type="password" minlength="12" placeholder="至少12位密码" required><button>创建</button></form>
+<h3>修改密码</h3><form method="post" action="{{url_for('update_password')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="email" type="email" required><input name="password" type="password" minlength="12" required><button>修改</button></form>
+<h3>设置容量</h3><form method="post" action="{{url_for('set_quota')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="email" type="email" required><input name="quota" placeholder="1G" required><button>设置</button></form>
+<h3>删除邮箱</h3><form method="post" action="{{url_for('delete_account')}}" onsubmit="return confirm('确定永久删除这个邮箱账户？');"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="email" type="email" required><button class="danger">删除</button></form></section>
+<section class="card"><h2>邮箱别名</h2><pre>{{ aliases }}</pre><h3>新增别名</h3><form method="post" action="{{url_for('add_alias')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="alias" type="email" placeholder="postmaster@mv3.cn" required><input name="recipient" type="email" placeholder="gptwork@mv3.cn" required><button>添加</button></form>
+<h3>删除别名</h3><form method="post" action="{{url_for('delete_alias')}}" onsubmit="return confirm('确定删除该别名映射？');"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="alias" type="email" required><input name="recipient" type="email" required><button class="danger">删除</button></form></section>
+</div>{% endblock %}
