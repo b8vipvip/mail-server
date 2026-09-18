@@ -1,0 +1,1 @@
+mailadmin ALL=(root) NOPASSWD: /usr/local/sbin/dms-admin-helper
