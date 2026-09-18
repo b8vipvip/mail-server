@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "admin"))
 
-from dms import DMSClient  # noqa: E402
+from dms import DMSClient
 
 
 def test_rejects_bad_email():
