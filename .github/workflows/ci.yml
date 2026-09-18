@@ -23,4 +23,6 @@ jobs:
       - run: ruff check admin tests
       - run: pytest -q
       - name: Compile Python
-        run: python -m compileall -q admin
+        run: |
+          python -m compileall -q admin
+          python -m py_compile deploy/dms-admin-helper.py

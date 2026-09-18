@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import json
 import re
-import subprocess
+import socket
 from dataclasses import dataclass
 
 EMAIL_RE = re.compile(r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
@@ -24,8 +25,7 @@ class DMSError(RuntimeError):
 
 @dataclass
 class DMSClient:
-    helper: str = "/usr/bin/sudo"
-    helper_program: str = "/usr/local/sbin/dms-admin-helper"
+    socket_path: str = "/run/dms-admin/helper.sock"
     timeout: int = 25
     allowed_domains: tuple[str, ...] = ("cn2.io", "mv3.cn")
 
@@ -41,22 +41,35 @@ class DMSClient:
     def _run(self, action: str, *args: str, secret: str | None = None) -> str:
         if action not in ALLOWED_ACTIONS:
             raise ValueError("Unsupported administrator action")
-        cmd = [self.helper, "-n", self.helper_program, action, *args]
+        request = {"action": action, "args": list(args)}
+        if secret is not None:
+            request["secret"] = secret
+        payload = json.dumps(request, separators=(",", ":")).encode() + b"\n"
         try:
-            result = subprocess.run(
-                cmd,
-                input=secret,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-                check=False,
-                env={"PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"},
-            )
-        except (OSError, subprocess.TimeoutExpired) as exc:
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+                sock.settimeout(self.timeout)
+                sock.connect(self.socket_path)
+                sock.sendall(payload)
+                sock.shutdown(socket.SHUT_WR)
+                chunks = []
+                total = 0
+                while True:
+                    chunk = sock.recv(65536)
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    if total > 1024 * 1024:
+                        raise DMSError("Mail administrator helper returned too much data")
+                    chunks.append(chunk)
+        except (OSError, TimeoutError) as exc:
             raise DMSError("Mail administrator helper is unavailable") from exc
-        if result.returncode != 0:
+        try:
+            response = json.loads(b"".join(chunks))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise DMSError("Mail administrator helper returned an invalid response") from exc
+        if not response.get("ok"):
             raise DMSError("Mail operation failed")
-        return result.stdout.strip()
+        return str(response.get("output", "")).strip()
 
     def list_accounts(self) -> str:
         return self._run("list-accounts")
