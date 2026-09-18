@@ -5,9 +5,17 @@ import os
 import secrets
 from functools import wraps
 
-from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
-
 from dms import DMSClient, DMSError
+from flask import (
+    Flask,
+    abort,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 
 def create_app() -> Flask:
@@ -32,6 +40,7 @@ def create_app() -> Flask:
             if not session.get("admin"):
                 return redirect(url_for("login"))
             return fn(*args, **kwargs)
+
         return wrapped
 
     def csrf_token() -> str:
