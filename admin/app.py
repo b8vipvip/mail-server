@@ -14,6 +14,7 @@ from logging.handlers import RotatingFileHandler
 from dms import DMSClient, DMSError
 from flask import (
     Flask,
+    Response,
     abort,
     flash,
     redirect,
@@ -22,6 +23,7 @@ from flask import (
     session,
     url_for,
 )
+from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash
 
 
@@ -60,10 +62,10 @@ def create_app() -> Flask:
     app.wsgi_app = PrefixMiddleware(app.wsgi_app, prefix)
     dms = DMSClient(allowed_domains=allowed_domains)
 
-    audit = logging.getLogger("mail-admin-audit")
+    audit = logging.getLogger("mail-admin-runtime")
     if not audit.handlers:
         handler = RotatingFileHandler(
-            os.environ.get("AUDIT_LOG", "/var/log/mail-server/audit.log"),
+            os.environ.get("RUNTIME_LOG", os.environ.get("AUDIT_LOG", "/var/log/mail-server/audit.log")),
             maxBytes=2_000_000,
             backupCount=5,
         )
@@ -159,7 +161,11 @@ def create_app() -> Flask:
             disk = shutil.disk_usage("/")
             disk_status = {"used": disk.used, "total": disk.total, "percent": round(disk.used * 100 / disk.total)}
             error = None
-        except DMSError:
+            failed_services = [name for name, ok in service_status.items() if not ok]
+            if failed_services:
+                audit_event("service-status", ",".join(failed_services), "abnormal")
+        except DMSError as exc:
+            audit.exception("component=web action=dashboard-read result=failed error=%s", type(exc).__name__)
             accounts, aliases, account_rows, alias_rows = "", "", [], []
             service_status, restrictions, disk_status = {}, {"send": "", "receive": ""}, {}
             error = "无法读取邮件服务器状态"
@@ -196,16 +202,48 @@ def create_app() -> Flask:
             lambda: dms.add_account(email, request.form.get("password", "")),
         )
 
-    @app.get("/audit")
+    def runtime_lines(limit: int = 500) -> list[str]:
+        paths = [
+            os.environ.get("RUNTIME_LOG", os.environ.get("AUDIT_LOG", "/var/log/mail-server/audit.log")),
+            "/var/log/mail-server/helper.log",
+        ]
+        rows: list[str] = []
+        for path in paths:
+            try:
+                with open(path, encoding="utf-8", errors="replace") as handle:
+                    rows.extend(line.rstrip() for line in deque(handle, maxlen=limit))
+            except OSError:
+                continue
+        return sorted(rows, reverse=True)[:limit]
+
+    @app.get("/logs")
     @login_required
-    def audit_log():
-        path = os.environ.get("AUDIT_LOG", "/var/log/mail-server/audit.log")
-        try:
-            with open(path, encoding="utf-8", errors="replace") as handle:
-                lines = list(deque(handle, maxlen=200))
-        except OSError:
-            lines = []
-        return {"lines": [line.rstrip() for line in reversed(lines)]}
+    def runtime_log():
+        return render_template("runtime.html", lines=runtime_lines())
+
+    @app.get("/logs/export")
+    @login_required
+    def export_runtime_log():
+        audit_event("runtime-log-export")
+        body = "\n".join(reversed(runtime_lines(5000))) + "\n"
+        return Response(
+            body,
+            mimetype="text/plain",
+            headers={"Content-Disposition": "attachment; filename=mail-server-runtime.log"},
+        )
+
+    @app.errorhandler(Exception)
+    def log_unhandled_error(exc):
+        if isinstance(exc, HTTPException):
+            if exc.code and exc.code >= 500:
+                audit.exception("component=web action=http-error status=%s", exc.code)
+            return exc
+        audit.exception(
+            "component=web action=unhandled path=%r error=%s",
+            request.path,
+            type(exc).__name__,
+        )
+        return "Internal Server Error", 500
 
     @app.post("/accounts/password")
     @login_required
