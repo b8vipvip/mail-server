@@ -1,146 +1,54 @@
 {% extends "base.html" %}
-{% block title %}邮件管理 · Mail Admin{% endblock %}
+{% block title %}仪表盘 · Mail Server Admin{% endblock %}
 {% block body %}
-<section class="hero">
-  <div>
-    <span class="eyebrow">MAIL SERVER</span>
-    <h1>邮箱管理</h1>
-    <p>集中管理邮箱账户、容量、收发权限与邮箱别名。</p>
-  </div>
-  <div class="domain-box">
-    <span>可管理域名</span>
-    <div class="domain-tags">{% for domain in domains %}<b>{{ domain }}</b>{% endfor %}</div>
-  </div>
-</section>
-
-{% if error %}<div class="msg error"><span class="msg-dot"></span>{{error}}</div>{% endif %}
-
-<div class="dashboard-grid">
-  <section class="panel panel-wide">
-    <div class="panel-head">
-      <div><span class="section-icon">＠</span><div><h2>邮箱账户</h2><p>当前服务器上的邮箱与容量状态</p></div></div>
-      <span class="status-pill">实时</span>
-    </div>
-    <div class="table-scroll">
-      <table class="data-table account-table">
-        <thead><tr><th>#</th><th>邮箱地址</th><th>别名</th><th>已用空间</th><th>配额</th><th>使用率</th><th>状态</th></tr></thead>
-        <tbody>
-        {% for row in account_rows %}
-          <tr>
-            <td class="row-no">{{ loop.index }}</td>
-            <td><strong class="email-cell">{{ row.email }}</strong></td>
-            <td>{% if row.aliases %}<span class="alias-tag">{{ row.aliases }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
-            <td>{{ row.used }}</td><td>{{ row.quota }}</td>
-            <td><span class="usage-track"><i style="width:{{ row.usage|replace('%','') }}%"></i></span><span class="usage-text">{{ row.usage }}</span></td>
-            <td><span class="online-dot"></span>正常</td>
-          </tr>
-        {% else %}
-          <tr><td colspan="7" class="empty-cell">暂无邮箱账户</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div class="table-foot">共 {{ account_rows|length }} 个邮箱账户</div>
-
-    <div class="section-divider"><span>账户操作</span></div>
-    <div class="action-grid">
-      <div class="action-card">
-        <div class="action-title"><span class="action-no">01</span><div><h3>新增邮箱</h3><p>创建一个新的邮箱账户</p></div></div>
-        <form method="post" action="{{url_for('add_account')}}">
-          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
-          <label>邮箱地址<input name="email" type="email" placeholder="user@mv3.cn" required></label>
-          <label>初始密码<input name="password" type="password" minlength="12" autocomplete="new-password" placeholder="至少 12 位" required></label>
-          <button class="btn btn-primary">创建邮箱</button>
-        </form>
-      </div>
-
-      <div class="action-card">
-        <div class="action-title"><span class="action-no">02</span><div><h3>修改密码</h3><p>重置指定邮箱的登录密码</p></div></div>
-        <form method="post" action="{{url_for('update_password')}}">
-          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
-          <label>邮箱地址<input name="email" type="email" placeholder="name@mv3.cn" required></label>
-          <label>新密码<input name="password" type="password" minlength="12" autocomplete="new-password" placeholder="至少 12 位" required></label>
-          <button class="btn btn-secondary">更新密码</button>
-        </form>
-      </div>
-
-      <div class="action-card">
-        <div class="action-title"><span class="action-no">03</span><div><h3>邮箱容量</h3><p>调整单个账户的存储配额</p></div></div>
-        <form method="post" action="{{url_for('set_quota')}}">
-          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
-          <label>邮箱地址<input name="email" type="email" placeholder="name@mv3.cn" required></label>
-          <label>容量<input name="quota" placeholder="例如 1G、500M" value="1G" required></label>
-          <button class="btn btn-secondary">保存容量</button>
-        </form>
-      </div>
-
-      <div class="action-card">
-        <div class="action-title"><span class="action-no">04</span><div><h3>收发权限</h3><p>限制或恢复邮箱发送/接收能力</p></div></div>
-        <form method="post" action="{{url_for('restrict')}}">
-          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
-          <label>邮箱地址<input name="email" type="email" placeholder="name@mv3.cn" required></label>
-          <div class="form-row">
-            <label>方向<select name="direction"><option value="send">发送邮件</option><option value="receive">接收邮件</option></select></label>
-            <label>操作<select name="mode"><option value="add">限制</option><option value="del">恢复</option></select></label>
-          </div>
-          <button class="btn btn-secondary">应用设置</button>
-        </form>
-      </div>
-    </div>
-  </section>
-
-  <aside class="side-stack">
-    <section class="panel">
-      <div class="panel-head">
-        <div><span class="section-icon">↗</span><div><h2>邮箱别名</h2><p>转发与映射关系</p></div></div>
-      </div>
-      <div class="table-scroll">
-        <table class="data-table alias-table">
-          <thead><tr><th>#</th><th>别名地址</th><th>目标邮箱</th></tr></thead>
-          <tbody>
-          {% for row in alias_rows %}
-            <tr><td class="row-no">{{ loop.index }}</td><td><strong>{{ row.alias }}</strong></td><td>{{ row.recipient }}</td></tr>
-          {% else %}
-            <tr><td colspan="3" class="empty-cell">暂无邮箱别名</td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="table-foot">共 {{ alias_rows|length }} 个邮箱别名</div>
-
-      <div class="side-action">
-        <div class="side-action-head"><span class="action-no">05</span><div><h3>新增别名</h3><p>创建新的邮件转发映射</p></div></div>
-        <form method="post" action="{{url_for('add_alias')}}">
-          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
-          <label>别名地址<input name="alias" type="email" placeholder="postmaster@mv3.cn" required></label>
-          <label>目标邮箱<input name="recipient" type="email" placeholder="gptwork@mv3.cn" required></label>
-          <button class="btn btn-primary">添加别名</button>
-        </form>
-      </div>
-
-      <details class="danger-zone">
-        <summary>删除邮箱别名</summary>
-        <form method="post" action="{{url_for('delete_alias')}}">
-          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
-          <label>别名地址<input name="alias" type="email" required></label>
-          <label>目标邮箱<input name="recipient" type="email" required></label>
-          <button class="btn btn-danger">确认删除别名</button>
-        </form>
-      </details>
-    </section>
-
-    <section class="panel danger-panel">
-      <div class="danger-heading"><span>!</span><div><h2>危险操作</h2><p>删除邮箱后不可恢复，请谨慎操作。</p></div></div>
-      <details class="danger-zone account-delete">
-        <summary>永久删除邮箱</summary>
-        <form method="post" action="{{url_for('delete_account')}}">
-          <input type="hidden" name="_csrf" value="{{csrf_token()}}">
-          <label>邮箱地址<input name="email" type="email" placeholder="要删除的邮箱" required></label>
-          <label>二次确认<input name="confirm" type="text" placeholder="再次完整输入邮箱地址" required></label>
-          <button class="btn btn-danger">永久删除</button>
-        </form>
-      </details>
-    </section>
-  </aside>
+<div class="admin-sidebar">
+  <div class="side-brand"><span class="side-logo">M</span><div><strong>Mail Server Admin</strong><small>邮件服务器管理控制台</small><em>v0.1.7</em></div></div>
+  <nav>
+    <a class="active" href="#dashboard"><span>⌂</span>仪表盘</a>
+    <a href="#accounts"><span>✉</span>邮箱账户</a>
+    <a href="#aliases"><span>↗</span>邮箱别名</a>
+    <a href="#settings"><span>⚙</span>系统设置</a>
+    <a href="#restrict"><span>♢</span>发送/接收限制</a>
+    <a href="#audit"><span>▤</span>操作日志</a>
+  </nav>
+  <div class="service-card"><b><i></i>服务运行中</b><p>Web 服务 <span>正常</span></p><p>Helper 服务 <span>正常</span></p><p>Docker Mailserver <span>正常</span></p></div>
 </div>
+
+<div class="admin-top"><div></div><div class="admin-user"><span class="avatar">A</span><b>admin</b><span>⌄</span>
+<form method="post" action="{{url_for('logout')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><button class="btn btn-outline">退出登录</button></form></div></div>
+
+<div class="dashboard-page" id="dashboard">
+  <div class="welcome-row"><div><h1>☀️ <span>欢迎回来, admin</span></h1><p>管理您的邮件服务器，保持高效与安全。</p></div><div class="managed-domains"><span>允许管理的域名</span>{% for domain in domains %}<b>{{domain}}</b>{% endfor %}</div></div>
+  {% if error %}<div class="msg error"><span class="msg-dot"></span>{{error}}</div>{% endif %}
+
+  <div class="stats-grid">
+    <div class="stat-card"><i class="stat-icon blue">✉</i><div><span>邮箱账户</span><strong>{{account_rows|length}}</strong><small>个账户</small></div><em>›</em></div>
+    <div class="stat-card"><i class="stat-icon purple">↗</i><div><span>邮箱别名</span><strong>{{alias_rows|length}}</strong><small>个别名</small></div><em>›</em></div>
+    <div class="stat-card"><i class="stat-icon green">▤</i><div><span>存储使用</span><strong>{% set ns=namespace(bytes=0) %}{% for r in account_rows %}{% if r.used.endswith('K') %}{% set ns.bytes=ns.bytes+(r.used[:-1]|float)*1024 %}{% endif %}{% endfor %}{{ '%.1f'|format(ns.bytes/1024) }} KB</strong><small>总已用（估算）</small></div><em>›</em></div>
+    <div class="stat-card"><i class="stat-icon green">♢</i><div><span>服务状态</span><strong class="healthy">正常</strong><small>所有服务运行中</small></div><em>›</em></div>
+  </div>
+
+  <div class="lists-grid">
+    <section class="dash-card" id="accounts">
+      <div class="dash-title"><div><i class="mini-icon">✉</i><span><b>邮箱账户列表</b><small>当前服务器上的所有邮箱账户及其使用情况。</small></span></div><label class="search-box">⌕<input id="accountSearch" placeholder="搜索邮箱地址..."></label></div>
+      <div class="table-scroll"><table class="dash-table"><thead><tr><th>#</th><th>邮箱地址</th><th>别名 (Aliases)</th><th>已用空间</th><th>配额</th><th>使用率</th><th>状态</th><th>操作</th></tr></thead><tbody id="accountBody">
+      {% for r in account_rows %}<tr><td>{{loop.index}}</td><td><b>{{r.email}}</b></td><td>{% if r.aliases %}<span class="alias-chip">{{r.aliases}}</span>{% else %}-{% endif %}</td><td>{{r.used}}</td><td>{{r.quota}}</td><td><span class="bar"><i style="width:{{r.usage|replace('%','')}}%"></i></span>{{r.usage}}</td><td><span class="ok-dot"></span>正常</td><td><button class="more-btn" type="button">•••</button></td></tr>{% else %}<tr><td colspan="8" class="empty-cell">暂无邮箱账户</td></tr>{% endfor %}
+      </tbody></table></div><div class="card-foot">共 {{account_rows|length}} 个邮箱账户</div>
+    </section>
+    <section class="dash-card" id="aliases"><div class="dash-title"><div><i class="mini-icon purple">↗</i><span><b>邮箱别名列表</b><small>当前配置的邮箱别名关系。</small></span></div></div>
+      <div class="table-scroll"><table class="dash-table"><thead><tr><th>#</th><th>别名地址</th><th>目标邮箱</th><th>操作</th></tr></thead><tbody>{% for r in alias_rows %}<tr><td>{{loop.index}}</td><td><b class="linkish">{{r.alias}}</b></td><td>{{r.recipient}}</td><td><button class="more-btn" type="button">•••</button></td></tr>{% else %}<tr><td colspan="4" class="empty-cell">暂无邮箱别名</td></tr>{% endfor %}</tbody></table></div><div class="card-foot">共 {{alias_rows|length}} 个别名</div>
+    </section>
+  </div>
+
+  <div class="forms-grid" id="settings">
+    <section class="form-card"><h3><i>✦</i>创建新邮箱</h3><p>创建一个新的邮箱账户。</p><form method="post" action="{{url_for('add_account')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><label>邮箱地址<input name="email" type="email" placeholder="user@mv3.cn" required></label><label>初始密码<input name="password" type="password" minlength="12" placeholder="至少 12 位" required></label><button class="btn btn-primary">⊕　创建邮箱</button></form></section>
+    <section class="form-card"><h3><i>⌕</i>修改邮箱密码</h3><p>重置指定邮箱的登录密码。</p><form method="post" action="{{url_for('update_password')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><label>邮箱地址<input name="email" type="email" placeholder="user@mv3.cn" required></label><label>新密码<input name="password" type="password" minlength="12" placeholder="至少 12 位" required></label><button class="btn btn-secondary">⌕　更新密码</button></form></section>
+    <section class="form-card"><h3><i>▤</i>设置邮箱容量</h3><p>调整邮箱账户的存储配额。</p><form method="post" action="{{url_for('set_quota')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><label>邮箱地址<input name="email" type="email" placeholder="user@mv3.cn" required></label><label>容量<select name="quota"><option value="1G">1 GB</option><option value="500M">500 MB</option><option value="2G">2 GB</option><option value="5G">5 GB</option></select></label><button class="btn btn-secondary">▣　保存容量</button></form></section>
+    <section class="form-card" id="restrict"><h3><i>♢</i>发送/接收限制</h3><p>限制或放宽邮箱的发送/接收能力。</p><form method="post" action="{{url_for('restrict')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><label>邮箱地址<input name="email" type="email" placeholder="user@mv3.cn" required></label><div class="form-row"><label>方向<select name="direction"><option value="send">发送邮件</option><option value="receive">接收邮件</option></select></label><label>操作<select name="mode"><option value="add">限制</option><option value="del">恢复</option></select></label></div><button class="btn btn-secondary">⚙　应用设置</button></form></section>
+  </div>
+
+  <section class="danger-strip"><div><i>▰</i><span><b>危险操作</b><small>删除邮箱和别名不可恢复，请谨慎操作。</small></span></div><div><details><summary class="danger-btn">▰　删除邮箱　›</summary><form method="post" action="{{url_for('delete_account')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="email" type="email" placeholder="邮箱地址" required><input name="confirm" placeholder="再次输入邮箱地址" required><button class="btn btn-danger">确认永久删除</button></form></details><details><summary class="danger-btn">▰　删除别名　›</summary><form method="post" action="{{url_for('delete_alias')}}"><input type="hidden" name="_csrf" value="{{csrf_token()}}"><input name="alias" type="email" placeholder="别名地址" required><input name="recipient" type="email" placeholder="目标邮箱" required><button class="btn btn-danger">确认删除别名</button></form></details></div></section>
+  <footer class="dash-footer">Mail Server Admin v0.1.7　|　安全 · 简洁 · 高效 <span>© 2026 Mail Server. All rights reserved.</span></footer>
+</div>
+<script>document.getElementById('accountSearch')?.addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('#accountBody tr').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')})</script>
 {% endblock %}
